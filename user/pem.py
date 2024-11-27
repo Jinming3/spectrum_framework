@@ -1,7 +1,7 @@
 """
 pem of canonical form
 Functions:
-forward -- non stop pem
+forward -- non-stop pem
 pemt -- with threshold to stop and restart, redefined N for batch-calculation, set thres=0, nonstop PEM
 peml -- packet-loss reconstruction
 pemt_pkf -- stop and transmit using PKF
@@ -47,7 +47,7 @@ def normalize(x, r=5):
 
 
 class PEM(object):  #
-    def __init__(self, n, t, N, m=1, r=1):
+    def __init__(self, n, t, N=1, m=1, r=1):
         self.n = n  # dim of X
         self.t = t  # dim of Theta
         self.N = N  # total data size
@@ -58,7 +58,6 @@ class PEM(object):  #
         self.Yhat_data = np.zeros(self.N)  # collect prediction
         self.VN_data = np.zeros(self.N)  # prediction mean squared errors
         self.Xhat = np.zeros((self.n, 1))
-        self.E_data = []  # collect n step ahead prediction error
         self.Ahat = np.eye(self.n, self.n, 1)  # canonical form
         self.Ahat_old = np.eye(self.n, self.n, 1)
         self.Bhat = np.zeros((self.n, 1))
@@ -87,7 +86,7 @@ class PEM(object):  #
 
 
 
-    def pem_one(self, Y_sys, U, on):  # dependent funtion !!!!!!!
+    def pem_one(self, Y_sys, U, on):  # dependent funtion, set up a loop elsewhere !!!!!!!
         """
         on-off PEM, threshold and slot in parent function!!! when rest, no reading y.
         similar to forward pem
@@ -111,6 +110,7 @@ class PEM(object):  #
 
         if on:
             self.Y[:] = Y_sys[:]  # read in transmission
+            # self.Y = Y_sys
             for i0 in range(self.n):  # derivative of A
                 self.Xhatdot0[self.n - 1, i0] = self.Xhat_old[i0, 0]
             for i1 in range(self.n):  # of B
@@ -166,7 +166,7 @@ class PEM(object):  #
             self.Y_old = np.copy(self.Y)
             self.Yhat_old = np.copy(self.Yhat)
             self.Yhat = np.copy(Yhat_new)
-            return self.Xhat
+        return self.Xhat  # in some old case, only reture xhat for not on, now return for both
 
     # ------------ ---- - non stop PEM --------- -------------------
     def forward(self, Y_sys, U):
