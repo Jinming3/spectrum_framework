@@ -12,14 +12,29 @@ matplotlib.use("TkAgg")
 import torch
 import torch.nn as nn
 
-np.random.seed(3)
-torch.manual_seed(3407)
+# np.random.seed(3)
+# torch.manual_seed(3407)
+# np.random.seed(0)
+# torch.manual_seed(0)
+
+
+# np.random.seed(2681073600) # R2= 0.94 , hidden = 64
+# torch.manual_seed(1747224464971300)
+#
+# np.random.seed(2285816605) # R2= 0.94
+# torch.manual_seed(1747591965946400)
+# seed_n = 0
+# seed_t = 0
+# np.random.seed(seed_n)
+# torch.manual_seed(seed_t)
 batch_num = 64
 batch_length = 32
 n_x = 2
-hidden = 64
 
+hidden =  128 #64#
 
+print('np seed begin', np.random.get_state()[1][0])
+print('torch seed begin ',  torch.seed())
 
 class MechanicalSystem(nn.Module):
 
@@ -27,21 +42,42 @@ class MechanicalSystem(nn.Module):
         super(MechanicalSystem, self).__init__()
         self.dt = dt  # sampling time
         self.hidden = hidden
-        self.net = nn.Sequential(nn.Linear(n_x + 1, self.hidden, bias=True),  # 3*1
-                                 # nn.LeakyReLU(negative_slope=0.4),
-                                 nn.ReLU(),
-                                 nn.Linear(self.hidden, 1, bias=True))  #
+        self.phi_k = nn.Sequential(nn.Linear(n_x, 2*self.hidden), nn.LeakyReLU(negative_slope=3), nn.Linear(2*self.hidden, self.hidden),# 0.7
+                                   nn. ReLU())  #
+                                   # nn.ReLU())  # nonlinear to lift x
+        # self.phi_b = nn.Linear(1, self.hidden)  # linear to lift u
+        self.phi_b = nn.Sequential(nn.Linear(1, 2*self.hidden),nn.Linear(2*self.hidden, self.hidden))#,nn.ReLU(), nn.Linear(128, 64))#,nn.ReLU(),
 
+                                   # nn.ReLU())nn.ReLU(),,nn.ReLU()
+
+        self.inv_phi = nn.Linear(self.hidden, 1)
+        # np random seed = train seed
         if init_small:
-            for i in self.net.modules():
+            for i in self.phi_k.modules():
+                if isinstance(i, nn.Linear):
+                    nn.init.normal_(i.weight, mean=0, std=1e-3)
+                    nn.init.constant_(i.bias, val=0)
+            for i in self.phi_b.modules():
+                if isinstance(i, nn.Linear):
+                    nn.init.normal_(i.weight, mean=0, std=1e-3)
+                    nn.init.constant_(i.bias, val=0)
+            for i in self.inv_phi.modules():
                 if isinstance(i, nn.Linear):
                     nn.init.normal_(i.weight, mean=0, std=1e-3)
                     nn.init.constant_(i.bias, val=0)
 
+
+
     def forward(self, x1, u1):
         list_dx: List[torch.Tensor]
-        in_xu = torch.cat((x1, u1), -1)
-        dv = self.net(in_xu) / self.dt  # v, dv = net(x, v)
+        self.out_k = self.phi_k(x1)
+        self.out_b = self.phi_b(u1)
+
+        self.out_q = self.out_k + self.out_b
+        out_inv = self.inv_phi(self.out_q)
+        dv = out_inv / self.dt  # v, dv = net(x, v)
+
+        # dv = self.net(in_xu) / self.dt  # v, dv = net(x, v)
         list_dx = [x1[..., [1]], dv]  # [dot x=v, dot v = a]
         dx = torch.cat(list_dx, -1)
         return dx
@@ -110,13 +146,16 @@ def get_batch(x_fit, U, Y_sys, batch_num, batch_length):
 #   --- process to be called ----
 
 def train(data_sample_train, setup):  # train NN
-
+    # np.random.seed(seed_n)
+    # torch.manual_seed(seed_t)
+    print('np seed train', np.random.get_state()[1][0])
+    print('torch seed train ', torch.seed())
     Y = data_sample_train[0]
     U = data_sample_train[1]
     dt =  setup.dt
-    num_epoch = 10000 #setup.num_epoch
-    lr = 0.0001
-    simulator = ForwardEuler(model=MechanicalSystem(dt,  n_x, hidden), dt=dt)
+    num_epoch = 21000 #10000
+    lr = 0.001 #0.0001
+    simulator = ForwardEuler(model=MechanicalSystem(dt,  n_x,  hidden), dt=dt)
 
     N = len(Y)
     Y_sys = np.array(Y, dtype=np.float32)
@@ -135,12 +174,12 @@ def train(data_sample_train, setup):  # train NN
     params_initial = [x_fit]
 
     optimizer = torch.optim.Adam([
-        {'params': params_net, 'lr':  lr},
+        {'params': params_net, 'lr': lr},
         {'params': params_initial, 'lr':  lr}
     ], lr= lr * 10)
 
     with torch.no_grad():
-        batch_x0, batch_x, batch_u, batch_y = get_batch(x_fit, U, Y_sys,  batch_num,  batch_length)
+        batch_x0, batch_x, batch_u, batch_y = get_batch(x_fit, U, Y_sys, batch_num,  batch_length)
         batch_xhat = simulator(batch_x0, batch_u)
         # traced_simulator = torch.jit.trace(simulator, (batch_x0, batch_u))
         batch_yhat = batch_xhat[:, :, [0]]
@@ -180,8 +219,7 @@ def train(data_sample_train, setup):  # train NN
 def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test NN, non-aging
     params_list = params[0]
     x_fit = params[1]
-    dt = setup.dt
-    simulator = ForwardEuler(model=MechanicalSystem( dt,  n_x,  hidden), dt= dt)
+    simulator = ForwardEuler(model=MechanicalSystem(setup.dt,  n_x,  hidden), dt=setup.dt)
 
     simulator.model.load_state_dict(params_list, strict=False)  #
 
@@ -216,52 +254,4 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test NN, no
 
 
 
-# ------- not tested yet >>> ----
 
-# def update(Y_sys, U, simulator, params_list, x_fit):  # input model, input pem or others for regulator updating
-#     N = len(Y_sys)
-#     checkpoint = params_list
-#     # optimizer = torch.optim.Adam([
-#     #     {'params': model.parameters(), 'lr': online.lr},
-#     #     {'params': [x_fit], 'lr': online.lr}
-#     # ], lr=online.lr * 10)
-#     # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-#
-#     # print(checkpoint.dtype)
-#     simulator.model.load_state_dict(checkpoint, strict=False)  # , strict=False
-#     simulator.model.eval()
-#     # -------------------------------------------------------------------------------------------------------------
-#     x0 = x_fit[[0], :].detach()
-#     Y_sys = np.array(Y_sys, dtype=np.float32)
-#     U = np.array(U, dtype=np.float32)
-#     Y_sys = Y_sys[:, np.newaxis]
-#     U = U[:, np.newaxis]
-#     u = torch.tensor(U[:, None, :])
-#     y = Y_sys[:, np.newaxis]
-#
-#     xhat_data = simulator(x0, u, y)  # try not given full y_data!!! only partial update
-#     # ----- optimization inside NN loop, stepwise --------
-#     yhat = xhat_data[:, 0]
-#     return yhat
-
-# def regulator(params, Y, U, setup, case):  # online regulator
-#     # Y=data_sample[0]
-#     # U=data_sample[1]
-#     params_list = params[0]
-#
-#     x_fit = params[1]
-#     N = len(Y)
-#     threshold1 = 0.91  # start retrain, R2
-#     threshold2 = 0.95  # stop retrain
-#     factor = PEM(2, 6, N)
-#     factor.P_old2 *= 0.09  # 0.009#0.09
-#     factor.Psi_old2 *= 0.9
-#     np.random.seed(3)
-#     factor.Thehat_old = np.random.rand(6, 1) * 0.01
-#     factor.Xhat_old = np.array([[2], [0]])
-#
-#
-#     simulator = ForwardEulerPEM(model=MechanicalSystem(setup.dt, setup.n_x, setup.hidden), factor=factor, dt=setup.dt, N=N, update=case, threshold1=threshold1,
-#                                 threshold2=threshold2)
-#     yhat = update(Y, U, simulator, params_list, x_fit)
-#     return yhat

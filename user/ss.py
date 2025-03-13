@@ -158,9 +158,13 @@ def train(data_sample_train, setup):
 
     Xhat_old = np.random.rand(2, 1)
 
-    params_list, x_fit = ss_learn(Thehat_old, P_old2, Psi_old2, Xhat_old, Y, U, n, r, m, t)
+    if Y.shape[0] == U.shape[0]: # train with full length of Y
 
-    return [params_list, x_fit]
+        params_list, x_fit = ss_learn(Thehat_old, P_old2, Psi_old2, Xhat_old, Y, U, n, r, m, t)
+
+        return [params_list, x_fit]
+
+    # if Y.shape[0] ==pause
 
 
 def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test model, non-aging, y=np.ones((2, 1))
@@ -191,22 +195,19 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test model,
 
         n = 2
         m = 1
-        r = 1
+        r = 1  #input dimension
         t = n + n * r + m * n
 
         np.random.seed(3)
         Thehat_old = np.random.rand(t, 1) * 0.01
         P_old2 = np.eye(t, t) * 0.09
         Psi_old2 = np.eye(t, 1) * 0.9
-
         Xhat_old = np.random.rand(2, 1)
-
         yhat = ss_learn(Thehat_old, P_old2, Psi_old2, Xhat_old, y, U, n, r, m, t, ahead_step=ahead_step)
-
         return yhat
 
     else:  # ahead=0, full prediction without y
-
         simulator = ss_model
         yhat = simulator(A, B, C, K, U, xhat, y, ahead_step=ahead_step)
         return yhat
+
