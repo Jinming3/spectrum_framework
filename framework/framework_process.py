@@ -2,22 +2,35 @@
 functions called by framework_start, no access to user
 """
 import math
-import os
-import sys
+import os, sys, time
 from math import sqrt
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import mean_squared_error
-
-sys.path.append('F:/Project/inProcess/Framework/framework/system/')
-# sys.path.append('system/')
-# import system
-import emps, rlc, tanks, springs
+import matplotlib
+import matplotlib.pyplot as plt
+from sympy import false
 
 matplotlib.use("TkAgg")
+import matplotlib.pylab as pylab
+pylab.rcParams['font.family'] = "Times New Roman"
+params = {
+    # 'figure.figsize': (4.8, 3.7),
+          'legend.fontsize': 11,
+          'axes.labelsize': 15,
+          'axes.labelpad': 0.5,
+          'xtick.labelsize': 15,
+          'ytick.labelsize': 15,
+          'legend.labelspacing': 0.3
+
+          }
+pylab.rcParams.update(params)
+sys.path.append(os.path.join(os.path.dirname(__file__), 'system'))
+
+import emps, rlc, tanks, springs
+
+
 
 
 def rmse(Y_sys, Yhat):
@@ -60,8 +73,8 @@ def fit_index(y_true, y_pred, time_axis=0):
 
     """
 
-    err_norm = np.linalg.norm(y_true - y_pred, axis=time_axis, ord=2)  # || y - y_pred ||
-    y_mean = np.mean(y_true, axis=time_axis)
+    err_norm = np.linalg.norm(y_true - y_pred,  ord=2)  # || y - y_pred ||axis=time_axis,
+    y_mean = np.mean(y_true) #, axis=time_axis
     err_mean_norm = np.linalg.norm(y_true - y_mean, ord=2)  # || y - y_mean ||
     fit_val = 100*(1 - err_norm/err_mean_norm)
 
@@ -144,6 +157,7 @@ class sys_select:
             self.U = normalize(self.U, r=norm)
             return self.U
 
+
     def sample_change(self, change, time_all, norm):
         """
         # system parameters aging
@@ -161,16 +175,29 @@ class sys_select:
             return self.U
 
 
-def param_save(user_params, sys_name, module):
+    def sample_u_spectrum(self, change_u, time_all, norm): # change u spectrum for training
+
+        self.Y, self.U = self.system.sample_u_spectrum(change_u, time_all)
+        self.Y_hidden = np.array(self.Y, dtype=np.float32)
+
+        if norm == 0:
+            return [self.Y, self.U]
+
+        if norm > 0:
+            self.Y_hidden = normalize(self.Y_hidden, r=norm)
+            self.U = normalize(self.U, r=norm)
+            return [self.Y, self.U]
+
+def param_save(user_params, sys_name, module, version=0):  # version=0, the normal u, other = spectrum u
     model_folder = os.path.join("models", sys_name)
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-    torch.save(user_params, os.path.join(model_folder, f"{sys_name}_{module}"))  # also for non-NN module
+    torch.save(user_params, os.path.join(model_folder, f"{sys_name}_{module}_{version}"))  # also for non-NN module
 
 
-def param_load(sys_name, module):
+def param_load(sys_name, module, version):
     model_folder = os.path.join("models", sys_name)
-    user_params = torch.load(os.path.join(model_folder, f"{sys_name}_{module}"))
+    user_params = torch.load(os.path.join(model_folder, f"{sys_name}_{module}_{version}"), weights_only=False)
     return user_params
 
 
@@ -179,89 +206,71 @@ class process:  # training or test
         self.plot = plot
 
     def test(self, user_model, user_params, data_sample_U, setup, measure, condition, ahead_step=0):
+        start_time = time.time()
 
-        if condition == 'ahead':
-            Y = measure.Y_hidden  # predict n step ahead
+        if condition == 'ahead':# predict n step ahead
+            self.plot = True
+            Y = measure.Y_hidden
             if ahead_step == 0 or ahead_step == 1:  # no update or one-step ahead
                 self.yhat = user_model(user_params, data_sample_U, setup, y=Y, ahead_step=ahead_step)
             else:  # one and more step ahead, update with y
                 self.yhat, self.yhat_ahead = user_model(user_params, data_sample_U, setup, y=Y, ahead_step=ahead_step)
 
+        elif condition=='eval_ahead':  #investage varying ahead steps
+            self.plot= False #not plot one-step-ahead
+            self.yhat = np.array([0]) # no need for yhat
+            Y = measure.Y_hidden
+            ahead_step_range = setup.ahead_step_range.astype('int')
+            predict_ahead_error = []
+
+            for ahead_step in ahead_step_range:
+                _, self.yhat_ahead = user_model(user_params, data_sample_U, setup, y=Y, ahead_step=ahead_step)
+                if len(self.yhat_ahead.shape) >1:  # data prepare, extract array in single-axis
+                    self.yhat_ahead = self.yhat_ahead[:, 0]
+                if setup.module == 'narmax':
+                    # N = len(Y)
+                    RMSE_ahead = rmse(Y, self.yhat_ahead) #[ahead_step:]
+                    r2_ahead = R2(Y, self.yhat_ahead)
+                    fit_ahead = fit_index(Y, self.yhat_ahead) #[:N-ahead_step]
+                else:
+
+                    RMSE_ahead = rmse(Y[ahead_step:], self.yhat_ahead)
+                    r2_ahead = R2(Y[ahead_step:], self.yhat_ahead)
+                    fit_ahead = fit_index(Y[ahead_step:], self.yhat_ahead)
+
+                predict_ahead_error.append([RMSE_ahead, r2_ahead, fit_ahead])
+
+            predict_ahead_error = np.array(predict_ahead_error, dtype=np.float32)
+
+
+            np.savetxt(f'models/ahead_eval_{setup.sys_name}_{setup.module}.txt', predict_ahead_error) #np.concatenate(([ahead_step_range],predict_ahead_error),axis=0)
+            plot_name = ['rmse', 'r2', 'fit(%)']
+            for i in range(3):
+                fig, ax = plt.subplots(1, 1, sharex=True)
+                ax.plot(ahead_step_range, predict_ahead_error[:, i], 'kx-', label=f'{plot_name[i]}') #
+                ax.legend()
+                ax.set_xlabel('Steps ahead')
+
+
         else:
+            self.plot = True
             Y = measure.Y_hidden  # real Y is not provided for update
             self.yhat = user_model(user_params, data_sample_U, setup, y=Y)  # for non-aging test
 
 
-        # if len(self.yhat.shape) > 1:
-        #     self.yhat = self.yhat[:, 0]
-        # self.RMSE = rmse(Y, self.yhat)
-        # self.r2 = R2(Y, self.yhat)
-        # print(f'test_{condition}_RMSE=', self.RMSE)
-        # print(f'test_{condition}_R2=', self.r2)
-        #
-        # if condition == 'ahead':
-        #     if len(Y) != len(self.yhat_ahead):
-        #         if len(self.yhat_ahead.shape) == 2:
-        #             self.yhat_ahead = self.yhat_ahead[:, 0]
-        #
-        #         self.RMSE_ahead = rmse(Y[ahead_step:], self.yhat_ahead)
-        #         self.r2_ahead = R2(Y[ahead_step:], self.yhat_ahead)
-        #
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
-        #         print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
-        #     if len(Y) == len(self.yhat_ahead):
-        #         self.RMSE_ahead = rmse(Y, self.yhat_ahead[:, 0])
-        #         self.r2_ahead = R2(Y, self.yhat_ahead[:, 0])
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
-        #         print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
+        print(f"\nRuntime_{condition}: {time.time() - start_time:.2f}")
 
-        # # -----
-        # if ahead_step == 0 or ahead_step == 1:  # full prediction or one-step-ahead
-        #
-        #     if len(self.yhat.shape) > 1:  # extract array in single-axis
-        #         self.yhat = self.yhat[:, 0]
-        #     self.RMSE = rmse(Y, self.yhat)
-        #     self.r2 = R2(Y, self.yhat)
-        #     print(f'test_{condition}_RMSE=', self.RMSE)
-        #     print(f'test_{condition}_R2=', self.r2)
-        #
-        # else: # contains multiple step ahead
-        #     if len(self.yhat.shape) > 1:
-        #         self.yhat = self.yhat[:, 0]
-        #     self.RMSE = rmse(Y, self.yhat)
-        #     self.r2 = R2(Y, self.yhat)
-        #     print(f'test_{condition}_RMSE=', self.RMSE)
-        #     print(f'test_{condition}_R2=', self.r2)
-        #
-        #     if len(Y) != len(self.yhat_ahead):
-        #         if len(self.yhat_ahead.shape) == 2:
-        #             self.yhat_ahead = self.yhat_ahead[:, 0]
-        #
-        #         self.RMSE_ahead = rmse(Y[ahead_step:], self.yhat_ahead)
-        #         self.r2_ahead = R2(Y[ahead_step:], self.yhat_ahead)
-        #
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
-        #         print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
-        #
-        #     if len(Y) == len(self.yhat_ahead):
-        #         self.RMSE_ahead = rmse(Y, self.yhat_ahead[:, 0])
-        #         self.r2_ahead = R2(Y, self.yhat_ahead[:, 0])
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
-        #         print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
-        # # -----
-        # -----
+        if self.yhat.any() == True:  # yhat actually computed
+            if len(self.yhat.shape) > 1:  # data prepare, extract array in single-axis
+                self.yhat = self.yhat[:, 0]
+            self.RMSE = rmse(Y, self.yhat)
+            self.r2 = R2(Y, self.yhat)
+            self.fit = fit_index(Y, self.yhat)
+            print(f'{condition}_RMSE=', self.RMSE)
+            print(f'{condition}_R2=', self.r2)
+            print(f'{condition}_fit(%)=', self.fit)
 
-        # evaluation
-        if len(self.yhat.shape) > 1:  # data prepare, extract array in single-axis
-            self.yhat = self.yhat[:, 0]
-        self.RMSE = rmse(Y, self.yhat)
-        self.r2 = R2(Y, self.yhat)
-        self.fit = fit_index(Y, self.yhat)
-        print(f'test_{condition}_RMSE=', self.RMSE)
-        print(f'test_{condition}_R2=', self.r2)
-        print(f'test_{condition}_fit(%)=', self.fit)
-
-        if ahead_step>1:  # contains multiple step ahead
+        if ahead_step>1 and condition!='eval_ahead':  # contains multiple step ahead
             if len(Y) != len(self.yhat_ahead):
                 if len(self.yhat_ahead.shape) == 2:  # data prepare, extract array in single-axis
                     self.yhat_ahead = self.yhat_ahead[:, 0]
@@ -269,10 +278,6 @@ class process:  # training or test
                 self.RMSE_ahead = rmse(Y[ahead_step:], self.yhat_ahead)
                 self.r2_ahead = R2(Y[ahead_step:], self.yhat_ahead)
                 self.fit_ahead = fit_index(Y[ahead_step:], self.yhat_ahead)
-
-                # print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
-                # print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
-                # print(f'predict_ahead_{ahead_step}_fit=', self.fit_ahead)
 
             if len(Y) == len(self.yhat_ahead):
                 self.RMSE_ahead = rmse(Y, self.yhat_ahead[:, 0])
@@ -282,21 +287,7 @@ class process:  # training or test
             print(f'predict_ahead_{ahead_step}_RMSE=', self.RMSE_ahead)
             print(f'predict_ahead_{ahead_step}_R2=', self.r2_ahead)
             print(f'predict_ahead_{ahead_step}_fit(%)=', self.fit_ahead)
-        # -----
 
-        # if ahead_step>1:
-        #
-        #     if len(self.yhat.shape) == 1:
-        #         if len(self.yhat_ahead.shape)==2:
-        #             self.yhat_ahead = self.yhat_ahead[:, 0]
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', rmse(Y[ahead_step:], self.yhat_ahead))
-        #         print(f'predict_ahead_{ahead_step}_R2=', R2(Y[ahead_step:], self.yhat_ahead))
-        #     elif len(Y)==len(self.yhat_ahead):
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', rmse(Y, self.yhat_ahead[:, 0]))
-        #         print(f'predict_ahead_{ahead_step}_R2=', R2(Y, self.yhat_ahead[:, 0]))
-        #     else:
-        #         print(f'predict_ahead_{ahead_step}_RMSE=', rmse(Y[ahead_step:], self.yhat_ahead[:, 0]))
-        #         print(f'predict_ahead_{ahead_step}_R2=', R2(Y[ahead_step:], self.yhat_ahead[:, 0]))
 
         if self.plot:
             N = len(Y)  # length of Y
@@ -304,7 +295,7 @@ class process:  # training or test
             fig, ax = plt.subplots(2, 1, sharex=True)
             ax[0].plot(time_exp, data_sample_U, 'k', label='u')
             ax[0].legend()
-            ax[1].set_xlabel('Time')
+            ax[1].set_xlabel('Time(s)')
             ax[1].plot(time_exp, Y, 'g', label='y')
             ax[1].plot(time_exp, self.yhat, 'r', label=f'yhat_{condition}')
             if condition == 'dynamic':  # mark up the changing points

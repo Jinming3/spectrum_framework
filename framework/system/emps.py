@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-np.random.seed(0)
+np.random.seed(3)
 
 
 class EMPS:
@@ -77,13 +77,16 @@ class measure:
 
     def sample(self, time_all, noise=0):
         """
-        original system or noisy system
+        original system and/not with noise
         """
         self.Y = []
         self.U = []
+        self.ref = []  # only for demonstration
 
         for i in range(int(time_all / self.dt)):
-            y = self.system.measure(sinwave(1, self.dt, i, 0.5), noise * 10, noise)
+            pos_ref = sinwave(1, self.dt, i, w=0.7)
+            y = self.system.measure(pos_ref, noise * 10, noise)
+            self.ref.append(pos_ref)
             self.Y.append(y)
             self.U.append(self.system.u)
 
@@ -92,16 +95,19 @@ class measure:
 
         return self.Y, self.U
 
-    def sample_test(self, time_all, noise=1e-3):
+    def sample_test(self, time_all, noise=1e-6):  # noise=1e-3
         """
         # original system adding noise, non-aging
         """
 
         self.Y = []
         self.U = []
+        self.ref = []  # only for demonstration
 
         for i in range(int(time_all / self.dt)):
-            y = self.system.measure(sinwave(1, self.dt, i, 0.5), noise * 10, noise)
+            pos_ref = sinwave(1, self.dt, i, 0.5)  # unseen frequency w # original 0.5
+            y = self.system.measure(pos_ref, noise * 10, noise)
+            self.ref.append(pos_ref)
             self.Y.append(y)
             self.U.append(self.system.u)
 
@@ -110,7 +116,63 @@ class measure:
 
         return self.Y, self.U
 
-    def sample_change(self, change, time_all, aging_rate=0.85):
+
+    def sample_u_spectrum(self, change_u, time_all):
+        """
+        system input change spectrum, test model robustness
+        :param change_u: the time u spectrum change
+        :param time_all: overall time
+        :return:
+        """
+
+        N = int(time_all / self.dt) # overall data size
+        change = (change_u / self.dt).astype(int) # changing data point
+
+        self.Y = []
+        self.U = []
+        self.ref = []
+
+        for i in range(change[0]):  # original condition adding noise
+            pos_ref = sinwave(1.2, self.dt, i, 0.3) # 0.5
+            y = self.system.measure(pos_ref, noise_process=1e-6, noise_measure=1e-5)
+            self.ref.append(pos_ref)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[0], change[1]):
+            pos_ref = sinwave(1, self.dt, i, 0.5)#triangle(1, i, self.dt)#
+            y = self.system.measure(pos_ref, noise_process=1e-6, noise_measure=1e-5)
+            self.ref.append(pos_ref)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[1], change[2]):
+            pos_ref = sinwave(1.0, self.dt, i, 0.8)#triangle(1, i, self.dt)
+            y = self.system.measure(pos_ref, noise_process=1e-4, noise_measure=1e-5)
+            self.ref.append(pos_ref)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[2], change[3]):
+            pos_ref = sinwave(0.6, self.dt, i, 1/2)+sinwave(0.4, self.dt, i, 1/3)
+            y = self.system.measure(pos_ref, noise_process=1e-4, noise_measure=1e-5)
+            self.ref.append(pos_ref)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[3], N):  # parameter is same, reference signal changes
+            pos_ref = sinwave(1.2, self.dt, i, 0.7)
+            y = self.system.measure(pos_ref, noise_process=1e-3, noise_measure=1e-4)  # triangle(2, i, self.dt)
+            self.ref.append(pos_ref)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        self.Y = np.array(self.Y, dtype=np.float32)
+        self.U = np.array(self.U, dtype=np.float32)
+
+        return self.Y, self.U
+
+    def sample_change(self, change, time_all, aging_rate=0.80):
         """
         system under ambient impacts, test model robustness
         :param change: the time system parameters change
@@ -134,13 +196,13 @@ class measure:
         self.system.M = self.system.M * aging_rate
         self.system.Fv = self.system.Fv * aging_rate
         self.system.Fc = self.system.Fc * aging_rate
+
         for i in range(change[0], change[1]):
             y = self.system.measure(sinwave(1, self.dt, i, 0.5), noise_process=1e-3, noise_measure=1e-4)
             self.Y.append(y)
             self.U.append(self.system.u)
 
-
-        for i in range(change[1], N): # parameter is same, reference signal changes
+        for i in range(change[1], N):  # parameter is same, reference signal changes
             y = self.system.measure(triangle(2, i, self.dt), noise_process=1e-3, noise_measure=1e-4)
             self.Y.append(y)
             self.U.append(self.system.u)
@@ -149,3 +211,5 @@ class measure:
         self.U = np.array(self.U, dtype=np.float32)
 
         return self.Y, self.U
+
+

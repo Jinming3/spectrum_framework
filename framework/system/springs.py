@@ -177,7 +177,55 @@ class measure:
 
         return self.Y, self.U
 
+    def sample_u_spectrum(self, change_u, time_all):
+        self.Y = []
+        self.U = []
 
+        N = int(time_all / self.ts)
+        change = (change_u/self.ts).astype(int)
+        for i in range(change[0]):  # first section in original condition
+            y = self.system.measure(sinwave(dt=self.ts, i=i, w=0.5, A=3), noise_process=1e-4, noise_measure=1e-5)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[0], change[1]):
+            y = self.system.measure(sinwave(dt=self.ts, i=i, w=0.5, A=1.5), noise_process=1e-4, noise_measure=1e-5)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[1], change[2]):
+            y = self.system.measure(ref=sinwave(self.ts, i, 1/2, 0.6), noise_process=1e-4, noise_measure=1e-5)  # 1
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[2], change[3]):
+            y = self.system.measure(ref=sinwave(self.ts, i, 1/3, 0.4), noise_process=1e-4, noise_measure=1e-5) # -1
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        for i in range(change[3], change[4]):
+            y = self.system.measure(ref=sinwave(self.ts, i, 1/2, 0.6)+sinwave(self.ts, i, 1/3, 0.4), noise_process=1e-4, noise_measure=1e-5)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+
+        for i in range(change[4], change[5]):
+            y = self.system.measure(ref=sinwave(self.ts, i, 0.1, 0.6), noise_process=1e-4,
+                                 noise_measure=1e-5)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+
+        for i in range(change[5], N):
+            y = self.system.measure(ref=sinwave(dt=self.ts, i=i, w=0.5, A=2), noise_process=1e-4,
+                                 noise_measure=1e-5)
+            self.Y.append(y)
+            self.U.append(self.system.u)
+
+        self.Y = np.array(self.Y, dtype=np.float32)  # not return to user, only for framework metric
+        self.U = np.array(self.U, dtype=np.float32)
+
+        return self.Y, self.U
 
 
 
