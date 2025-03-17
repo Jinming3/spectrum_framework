@@ -18,8 +18,8 @@ import torch.nn as nn
 # torch.manual_seed(0)
 
 
-np.random.seed(2681073600) # R2= 0.95 , hidden = 64
-torch.manual_seed(1747224464971300)
+# np.random.seed(2681073600) # R2= 0.94 , hidden = 64
+# torch.manual_seed(1747224464971300)
 #
 # np.random.seed(2285816605) # R2= 0.94
 # torch.manual_seed(1747591965946400)
