@@ -22,7 +22,7 @@ class ModelTrain_setting:
             self.time_spectrum_train = 120
             self.change_u = np.array([20,40, 60,80, 100]) # change the spectrum in u, theta not change
             self.pause = 40
-            self.time_test = 30  # seconds, time for generating testing data
+            self.time_test = 50  # seconds, time for generating testing data
             self.change = np.array([20, 50]) # aging
 
             self.dt = torch.tensor(self.ts, dtype=torch.float32)
