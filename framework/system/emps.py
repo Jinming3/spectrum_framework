@@ -105,7 +105,7 @@ class measure:
         self.ref = []  # only for demonstration
 
         for i in range(int(time_all / self.dt)):
-            pos_ref = sinwave(1, self.dt, i, 0.5)  # unseen frequency w # original 0.5
+            pos_ref = sinwave(1, self.dt, i, 0.5)  #  original 1 0.5
             y = self.system.measure(pos_ref, noise * 10, noise)
             self.ref.append(pos_ref)
             self.Y.append(y)
@@ -140,7 +140,7 @@ class measure:
             self.U.append(self.system.u)
 
         for i in range(change[0], change[1]):
-            pos_ref = sinwave(1, self.dt, i, 0.5)#triangle(1, i, self.dt)#
+            pos_ref = sinwave(0.8, self.dt, i, 0.5)#triangle(1, i, self.dt)#0.5
             y = self.system.measure(pos_ref, noise_process=1e-6, noise_measure=1e-5)
             self.ref.append(pos_ref)
             self.Y.append(y)
@@ -161,7 +161,7 @@ class measure:
             self.U.append(self.system.u)
 
         for i in range(change[3], N):  # parameter is same, reference signal changes
-            pos_ref = sinwave(1.2, self.dt, i, 0.7)
+            pos_ref = sinwave(1.2, self.dt, i, 0.7) # 0.7
             y = self.system.measure(pos_ref, noise_process=1e-3, noise_measure=1e-4)  # triangle(2, i, self.dt)
             self.ref.append(pos_ref)
             self.Y.append(y)
