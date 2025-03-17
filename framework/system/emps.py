@@ -57,7 +57,7 @@ def sinwave(A, dt, i, w, sig=1, phi=0):
     return x
 
 
-def triangle(A, i, dt, p=2):
+def triangle(A, i, dt, p=2.5):  # 2
     """
     triangle wave signal
     A: amplitude
@@ -140,14 +140,14 @@ class measure:
             self.U.append(self.system.u)
 
         for i in range(change[0], change[1]):
-            pos_ref = sinwave(0.8, self.dt, i, 0.5)#triangle(1, i, self.dt)#0.5
+            pos_ref = sinwave(0.8, self.dt, i, 0.5)
             y = self.system.measure(pos_ref, noise_process=1e-6, noise_measure=1e-5)
             self.ref.append(pos_ref)
             self.Y.append(y)
             self.U.append(self.system.u)
 
         for i in range(change[1], change[2]):
-            pos_ref = sinwave(1.0, self.dt, i, 0.8)#triangle(1, i, self.dt)
+            pos_ref = triangle(1, i, self.dt)  # sinwave(1.0, self.dt, i, 0.8)#
             y = self.system.measure(pos_ref, noise_process=1e-4, noise_measure=1e-5)
             self.ref.append(pos_ref)
             self.Y.append(y)
