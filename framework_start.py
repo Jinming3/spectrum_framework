@@ -11,6 +11,7 @@ import numpy as np
 from framework.framework_process import sys_select, param_save, param_load, process
 
 matplotlib.use("TkAgg")
+
 # ----- user import >>> ------
 sys.path.append('user/')
 from user import init
@@ -19,23 +20,17 @@ from user import init
 sys_name = 'EMPS'
 # sys_name = 'springs'
 # sys_name = 'rlc'
-
 # sys_name = 'tanks'
-
 
 # ------------choose your method to test -----------------
 # module = 'dummy'
 # module = 'ss'  # state space
 # module = 'nn'
-# module = 'koopman_edmdc'
-# module = 'nn_koopman_nu'
 module = 'nn_koopman'
 # module = 'narmax'
-# ---
 
 # module = 'nn_overflow' # NN for tanks overflow
 # module = 'nn_ss' # for non-mechanical like RLC, neural network state-space model
-
 
 # ----------- choose to train the model from start or test from loading ---------------
 new_train = False
@@ -44,11 +39,10 @@ version = 0
 setup = init.ModelTrain_setting(sys_name)  # setup hyperparameters
 norm = 1  # normalize data into [-norm, +norm]
 
-# # # ------------ training ---------
+# # ------------ training ---------
 if new_train:
     sample = sys_select(sys_name, setup)
     data_sample_train = sample.sample(time_all=setup.time_train, norm=norm, noise=0)  # data pair for training, [Y, U]
-
     np.savetxt('ref_train.txt', sample.system.ref)
 
     exec(f'from {module} import train')
@@ -72,15 +66,15 @@ user_model = test  # using testing dataset
 
 simulation.test(user_model, user_params, data_sample_test, setup, measure=sample, condition='test')
 # np.savetxt(f'data_test_yhat_{sys_name}_{module}.txt', simulation.yhat)
+
 # -------- test for n-step-ahead prediction --
 # sample = sys_select(sys_name,setup)
-# data_sample_test = sample.sample_test(time_all=setup.time_test, norm=norm, noise=10e-4) #  # data for testing, only contains data_U
-# ahead_step= 100#10#5#10#30#5#
+# data_sample_test = sample.sample_test(time_all=setup.time_test, norm=norm, noise=10e-4) #  data for testing, only contains data_U
+# ahead_step= 100 #10#5#10#30#5#
 # user_model = test
 # simulation.test(user_model, user_params, data_sample_test, setup, measure=sample, condition='ahead', ahead_step=ahead_step)
 
-
-# # # # ---- varying ahead step test ------
+# # # ---- varying ahead step test ------
 
 # ahead_step_range = np.array([5,10,20,30,50,70,90, 100])
 # setup.ahead_step_range = ahead_step_range
@@ -90,12 +84,12 @@ simulation.test(user_model, user_params, data_sample_test, setup, measure=sample
 # # # ------ spectrum training and test ---
 # spectrum_train = False
 spectrum_train = True
-version = 2
+version = 2  # name a test version
 setup = init.ModelTrain_setting(sys_name)
 if spectrum_train:
     sample = sys_select(sys_name, setup)
     spectrum_train_data = sample.sample_u_spectrum(change_u=setup.change_u, time_all=setup.time_spectrum_train,
-                                                   norm=norm)  # Y, U
+                                                   norm=norm)  
     np.savetxt('ref_spectrum.txt', sample.system.ref)
 
     # fig, ax = plt.subplots(2, 1, sharex=True)
@@ -121,22 +115,20 @@ data_sample_test = sample.sample_test(time_all=setup.time_test, norm=norm, noise
 exec(f'from {module} import test')
 user_model = test  # using testing dataset
 simulation.test(user_model, user_params_spectrum, data_sample_test, setup, measure=sample, condition='spectrum')
-np.savetxt(f'data_spectrum_yhat_{sys_name}_{module}.txt', simulation.yhat)
+# np.savetxt(f'data_spectrum_yhat_{sys_name}_{module}.txt', simulation.yhat)
 
 
 # # # ----------system parameters change, aging--------
 # # sample = sys_select(sys_name, setup)
 # # data_sample_change = sample.sample_change(change=setup.change, time_all=setup.time_test, norm=norm)  # only U
-# # simulation.test(user_model, user_params, data_sample_change, setup, measure=sample, condition='dynamic')  #
-#
-#
+# # simulation.test(user_model, user_params, data_sample_change, setup, measure=sample, condition='dynamic')  
+
 # # ---- no process, just read and plot ----
 # # # ---- plot reference signal for EMPS -----
 ref_train = np.loadtxt('ref_train.txt')
 ref_test = np.loadtxt('ref_test.txt')
 ref_spectrum = np.loadtxt('ref_spectrum.txt')
-# #
-#
+
 ticksize = 13
 plt.rcParams['text.usetex']=True
 plt.rcParams['text.latex.preamble']=r'\makeatletter \newcommand*{\rom}[1]{\expandafter\@slowromancap\romannumeral #1@} \makeatother'
@@ -144,7 +136,7 @@ plt.rcParams['text.latex.preamble']=r'\makeatletter \newcommand*{\rom}[1]{\expan
 fig, ax = plt.subplots(3, 1, sharex=False)
 ax[0].plot(np.arange(len(ref_train)) * setup.ts, ref_train, 'r', label='train')
 ax[0].legend()
-ax[0].set_ylabel(r'\romannumeral 1' )  #    # r'\rom{1}'
+ax[0].set_ylabel(r'\romannumeral 1' )  
 ax[0].xaxis.set_tick_params(labelsize=ticksize)
 ax[1].plot(np.arange(len(ref_test)) * setup.ts, ref_test, 'k', label='test')
 ax[1].legend()
@@ -155,8 +147,7 @@ ax[2].legend()
 ax[2].set_ylabel(r'\romannumeral 3')
 ax[2].xaxis.set_tick_params(labelsize=ticksize)
 ax[2].set_xlabel('Time(s)')
-# #
-#
+
 test_y = np.loadtxt('data_test.txt')[0]
 test_yhat = np.loadtxt(f'data_test_yhat_{sys_name}_{module}.txt')
 test_yhat_spectrum = np.loadtxt(f'data_spectrum_yhat_{sys_name}_{module}.txt')
@@ -177,7 +168,6 @@ ax[1].xaxis.set_tick_params(labelsize=ticksize)
 ax[1].set_xlabel('Time(s)')
 
 # ---- plot in paper ----
-#
 # ahead_eval_EMPS_ss = np.loadtxt('models/ahead_eval_EMPS_ss.txt')
 # ahead_eval_EMPS_narmax = np.loadtxt('models/ahead_eval_EMPS_narmax.txt')
 # xticksize = 14
@@ -198,8 +188,3 @@ ax[1].set_xlabel('Time(s)')
 #     ax.yaxis.get_label().set_fontsize(ylabelsize)
 #     ax.xaxis.get_label().set_fontsize(xlabelsize)
 
-
-
-
-print('np seed', np.random.get_state()[1][0])
-print('torch seed',  torch.seed())
