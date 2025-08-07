@@ -1,9 +1,8 @@
 """
-works!!!!!!!
+works
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-
 import time
 import pykoopman as pk
 from pykoopman.common.examples import forced_duffing, rk4, sine_wave  # required for example system
@@ -18,7 +17,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-
 def train(data_sample_train, setup):
     Y0 = data_sample_train[0]
     U = data_sample_train[1]
@@ -30,8 +28,8 @@ def train(data_sample_train, setup):
     dT = setup.ts
 
     v_est = np.diff(Y0, axis=0) / dT
-    v_est = np.r_[[[0]], v_est]  # '-1',
-    X = np.concatenate((Y0, v_est), axis=1).T  # , U
+    v_est = np.r_[[[0]], v_est]  ,
+    X = np.concatenate((Y0, v_est), axis=1).T  
 
     Y = np.roll(X, -1)
 
@@ -50,12 +48,10 @@ def train(data_sample_train, setup):
 
     model = pk.Koopman(observables=RBF, regressor=EDMDc)
 
-    off = len(Y0)#8000#
+    off = len(Y0)
     window = 4000
     x_hat_online = np.zeros((off, 2))
-    for i in range(off):  # window, len(Y0)
-        # if i % 100 == 0:
-        #     print(f'Iter {i} ')
+    for i in range(off):  
         if i < window:
             Yp = Y[:, :i + 1]
             Up = U[:, :i + 1]
@@ -65,75 +61,10 @@ def train(data_sample_train, setup):
             Up = U[:, i - window:i]
             Xp = X[:, i - window:i]
         model.fit(Xp.T, y=Yp.T, u=Up.T)
-        # x = X[:, i]
-        # Xkoop_p = model.simulate(x, Up.T)  # window-1, n_steps=2
-        # x_hat_online[i, :] = Xkoop_p  ##:i+2
-    # if off < len(Y0): # stop giving Y
-    #     Up = U[:, off:]
-    #     x = Xkoop_p[0, :]  # np.array([0., -0.])#X[:, i]#
-    #     Xkoop_p2 = model.simulate(x, Up.T, n_steps=len(Y0) - off)
-    #     x_hat_online = np.vstack(
-    #         [x_hat_online, Xkoop_p2])  # add initial condition to simulated data for comparison below
 
     return model
 
-# def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):
-#     # np.random.seed(42)
-#     # EDMDc = pk.regression.EDMDc()
-#     # np.random.seed(42)
-#     # centers = np.random.uniform(-1.5, 1.5, (2, 4))
-#     # RBF = pk.observables.RadialBasisFunction(
-#     #     rbf_type="thinplate",
-#     #     n_centers=centers.shape[1],
-#     #     centers=centers,
-#     #     kernel_width=1,
-#     #     polyharmonic_coeff=1.0,
-#     #     include_state=True,
-#     # )
-#     #
-#     # model = pk.Koopman(observables=RBF, regressor=EDMDc)
-#     Y0 = y[:, np.newaxis]
-#     U = U_test[:, np.newaxis].T
-#     dT = setup.ts
-#     v_est = np.diff(Y0, axis=0) / dT
-#     v_est = np.r_[[[0]], v_est]
-#     X = np.concatenate((Y0, v_est), axis=1).T  # , U
-#     Y = np.roll(X, -1)
-#     model= params
-#     # Up = U_test[:, np.newaxis]
-#     # x = np.concatenate(([[y[0]], [0]]))#, axis=1).T #
-#     # # x = x[:, None].T
-#     #
-#     #
-#     # Xkoop_p = model.simulate(x, Up)  # window-1, n_steps=2
-#     # return Xkoop_p
-#     off = len(Y0)  # 8000#
-#     # window = 4000
-#     x_hat_online = np.zeros((off, 2))
-#     for i in range(off):  # window, len(Y0)
-#         Up = U
-#         # if i < window:
-#         #     Yp = Y[:, :i + 1]
-#         #     Up = U[:, :i + 1]
-#         #     Xp = X[:, :i + 1]
-#         # else:
-#         #     Yp = Y[:, i - window:i]
-#         #     Up = U[:, i - window:i]
-#         #     Xp = X[:, i - window:i]
-#         # model.fit(Xp.T, y=Yp.T, u=Up.T)
-#         x = X[:, i]
-#         Xkoop_p = model.simulate(x, Up.T)  # window-1, n_steps=2
-#         x_hat_online[i, :] = Xkoop_p  ##:i+2
-#
-#     # if off < len(Y0):
-#     #     Up = U[:, off:]
-#     #     x = Xkoop_p[0, :]  # np.array([0., -0.])#X[:, i]#
-#     #     Xkoop_p2 = model.simulate(x, Up.T, n_steps=len(Y0) - off)
-#     #     x_hat_online = np.vstack(
-#     #         [x_hat_online, Xkoop_p2])  # add initial condition to simulated data for comparison below
-#
-#
-#     return x_hat_online[:, 0]
+
 
 def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):
 
