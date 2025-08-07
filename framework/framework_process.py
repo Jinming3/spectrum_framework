@@ -28,9 +28,7 @@ params = {
 pylab.rcParams.update(params)
 sys.path.append(os.path.join(os.path.dirname(__file__), 'system'))
 
-import emps, rlc, tanks, springs
-
-
+import emps, rlc, springs  #  tanks,
 
 
 def rmse(Y_sys, Yhat):
@@ -142,7 +140,7 @@ class sys_select:
 
     def sample_test(self, time_all, norm, noise):
         """
-        # original system with noise, non-aging
+         original system with noise, non-aging
         """
 
         self.Y, self.U = self.system.sample_test(time_all, noise=noise)
@@ -160,7 +158,7 @@ class sys_select:
 
     def sample_change(self, change, time_all, norm):
         """
-        # system parameters aging
+         system parameters aging
         """
 
         self.Y, self.U = self.system.sample_change(change, time_all)
@@ -243,14 +241,13 @@ class process:  # training or test
             predict_ahead_error = np.array(predict_ahead_error, dtype=np.float32)
 
 
-            np.savetxt(f'models/ahead_eval_{setup.sys_name}_{setup.module}.txt', predict_ahead_error) #np.concatenate(([ahead_step_range],predict_ahead_error),axis=0)
+            np.savetxt(f'models/ahead_eval_{setup.sys_name}_{setup.module}.txt', predict_ahead_error) 
             plot_name = ['rmse', 'r2', 'fit(%)']
             for i in range(3):
                 fig, ax = plt.subplots(1, 1, sharex=True)
-                ax.plot(ahead_step_range, predict_ahead_error[:, i], 'kx-', label=f'{plot_name[i]}') #
+                ax.plot(ahead_step_range, predict_ahead_error[:, i], 'kx-', label=f'{plot_name[i]}') 
                 ax.legend()
                 ax.set_xlabel('Steps ahead')
-
 
         else:
             self.plot = True
