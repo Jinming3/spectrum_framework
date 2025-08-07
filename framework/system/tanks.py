@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import math
 
-df = pd.read_csv('F:/Project/inProcess/Framework/framework/system/tank_input.csv') #
+df = pd.read_csv('tank_input.csv') # check file path!
 U_train = np.array(df["uEst"]).astype(np.float32)
 U_test = np.array(df["uVal"]).astype(np.float32)
 
@@ -55,7 +55,7 @@ class tanks2:  # open loop, 2 tanks
                 u = 0
         self.U_data.append(u)
 
-        self.v1 = -self.C1 / self.A1 * math.sqrt(self.x1 * 2 * self.g) + self.kv / self.A1 * u + np.random.randn() *noise *0.1 #*0.1
+        self.v1 = -self.C1 / self.A1 * math.sqrt(self.x1 * 2 * self.g) + self.kv / self.A1 * u + np.random.randn() *noise *0.1 
         self.x1 = self.x1 + self.v1 * self.dt
         if self.x1 < 0:
             self.x1 = 0
@@ -65,7 +65,7 @@ class tanks2:  # open loop, 2 tanks
         if self.x2 < 0:
             self.x2 = 0
 
-        self.y = Satu(self.x2, self.h_max) #
+        self.y = Satu(self.x2, self.h_max) 
 
         return self.y
 
@@ -158,34 +158,6 @@ class measure:
         return self.Y, self.U
 
 
-# open loop
-# ctr = 0
-# U = sinwave(dt, t_max)
-# U = np.array(U, dtype=np.float32)
-
-# ------------------------------------------
-#
-# #  closed loop
-# # kp, kd = 160.18, 243.45
-# kp, kd = 0.1, 10
-# ref = np.ones((N, 1))*0.15
-# ctr = 1
-# for i in range(int(t_max/dt)):
-#     Y_sys.append(sampling.measure(ctr=ctr, ref=ref[i]))
-# ----------------------------------------------------
-
-# Y_sys= np.squeeze(Y_sys, axis=-1)
 
 
-# fig, ax = plt.subplots(2, 1, sharex=True)
-# ax[0].plot(sampling.U_data, 'k', label='u')
-# ax[0].set_xlabel('Time')
-# ax[0].legend()
-# ax[1].plot(Y_sys, 'g', label='y1')
-# ax[1].legend()
-# ax[2].plot(Y_sys, 'g', label='y2')
-# ax[2].legend()
-# ax[3].plot(Y_sys[:, 2], 'g', label='y3')
-# ax[3].legend()
-# np.savetxt(f'tanks_ctr{ctr}_t{dt}_y.txt', Y_sys)
-# np.savetxt(f'tanks_ctr{ctr}_t{dt}_u.txt', sampling.U_data)
+
