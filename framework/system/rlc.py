@@ -34,7 +34,6 @@ class rlc:
         self.dil = -1 / self.L * self.vc - R / self.L * self.il + 1 / self.L * u + np.random.randn() * noise_process
         self.vc = self.vc + self.dvc * self.ts + np.random.normal(0, 10) * noise_measure
         self.il = self.il + self.dil * self.ts + np.random.normal(0, 1) * noise_measure
-
         output = self.vc
         return output
 
@@ -70,7 +69,7 @@ class measure:
 
     def sample_test(self, time_all, noise):
         """
-        # original system adding noies, non-changing
+        original system adding noies, non-changing
         """
 
         self.Y = []
@@ -137,4 +136,5 @@ class measure:
         self.U = np.array(self.U, dtype=np.float32)
 
         return self.Y, self.U
+
 
