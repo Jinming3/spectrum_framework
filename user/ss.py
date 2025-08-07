@@ -119,12 +119,10 @@ def ss_learn(Thehat_old, P_old2, Psi_old2, Xhat_old, y_all, u_all, n, r, m, t, a
 
         Yhat = np.dot(Chat, Xhat)
         Xhat_new = np.dot(Ahat, Xhat) + Bhat * U + Khat * (Y - Yhat)
-        # Yhat_new = np.dot(Chat, Xhat_new)
-
+        
         # update every parameter which is time-variant
         Xhat_old = np.copy(Xhat)
         Xhat = np.copy(Xhat_new)
-
         Ahat_old = np.copy(Ahat)
         Khat_old = np.copy(Khat)
         Xhatdot_old = np.copy(Xhatdot)
@@ -134,7 +132,7 @@ def ss_learn(Thehat_old, P_old2, Psi_old2, Xhat_old, y_all, u_all, n, r, m, t, a
         P_old2 = np.copy(P_old)
         Y_old = np.copy(Y)
         Yhat_old = np.copy(Yhat)
-        # Yhat = np.copy(Yhat_new)
+        
         Yhat_data[i] = Yhat
     if ahead_step==0:
         return [Ahat, Bhat, Chat, Khat], Xhat
@@ -164,10 +162,7 @@ def train(data_sample_train, setup):
 
         return [params_list, x_fit]
 
-    # if Y.shape[0] ==pause
-
-
-def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test model, non-aging, y=np.ones((2, 1))
+def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test model, non-aging
     params_list = params[0]
     x_fit = params[1]
     A = params_list[0]
@@ -210,4 +205,5 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test model,
         simulator = ss_model
         yhat = simulator(A, B, C, K, U, xhat, y, ahead_step=ahead_step)
         return yhat
+
 
