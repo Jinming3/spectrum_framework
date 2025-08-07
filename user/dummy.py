@@ -1,3 +1,6 @@
+"""
+a dummy model, no use
+"""
 import numpy as np
 
 
@@ -39,6 +42,7 @@ def test(user_params, data_sample_U, setup, y, ahead_step=0):
     Y = y
     yhat_data = model(Y, U, ahead_step)
     return yhat_data
+
 
 
 
