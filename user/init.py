@@ -10,8 +10,6 @@ class ModelTrain_setting:
 
     def __init__(self, sys_name):
         self.ahead_step_range=np.ones((1, 2))
-        # self.ahead_step_range=np.ones((1, 2), dtype=int)
-        # self.ahead_step_range = np.ones(2, dtype=int)
         self.sys_name = sys_name
         self.module = 'module_name'
 
@@ -24,9 +22,7 @@ class ModelTrain_setting:
             self.pause = 40
             self.time_test = 50  # seconds, time for generating testing data
             self.change = np.array([20, 50]) # aging
-
             self.dt = torch.tensor(self.ts, dtype=torch.float32)
-
 
 
         elif sys_name == 'tanks':
@@ -41,7 +37,6 @@ class ModelTrain_setting:
             self.n_x = 2
             self.hidden = 64
             self.dt = torch.tensor(self.ts, dtype=torch.float32)
-
 
 
         elif sys_name == 'springs':
