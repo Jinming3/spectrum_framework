@@ -52,7 +52,6 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
     def forward(self, x0: torch.Tensor, u: torch.Tensor, y):
         x_step = x0
         self.Thehat = np.zeros((self.N, 6))
-
         self.y_pem = []
         self.y_pem0 = []
         self.r2 = np.zeros(self.N)
@@ -60,7 +59,6 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
         # ---------------
         q = 0
         while q < self.N:
-
             if self.update == 0: # not updating, no PEM, just basic inference in simple forward Euler
                 u_step = u[q]
                 dx = self.model(x_step, u_step)
@@ -81,7 +79,7 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
                 match = R2(y[q - self.sensitivity:q, 0, 0], self.xhat_data[q - self.sensitivity:q, 0])
                 q = q + 1
 
-            if self.update == 5:  # update with threshold,  adding resting PEM !! # use this!!
+            if self.update == 5:  # update with threshold,  adding resting PEM  
                 u_step = u[q]
                 dx = self.model(x_step, u_step)
                 x_step = x_step + dx * self.dt + torch.tensor(self.factor.Xhat[:, 0], dtype=torch.float32)# non-updating pem added
@@ -100,10 +98,8 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
                 self.y_pem0.append([self.factor.Xhat[0, 0], q])
                 self.y_pem.append([None, q])
 
-
                 self.Thehat[q, :] = np.copy(self.factor.Thehat[:, 0])
-                # match = R2(y[q - self.sensitivity:q, 0], self.xhat_data[q - self.sensitivity:q, 0]) # check the dimension before use
-                match = R2(y[q - self.sensitivity:q, 0, 0], self.xhat_data[q - self.sensitivity:q, 0])
+                match = R2(y[q - self.sensitivity:q, 0, 0], self.xhat_data[q - self.sensitivity:q, 0]) # check the dimension before use
                 # if q > self.sensitivity:
                 #     match = R2(y[q - self.sensitivity:q, 0, 0], self.xhat_data[q - self.sensitivity:q, 0])
                 # if q <= self.sensitivity:
@@ -126,7 +122,6 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
                         x_out = x_step.clone().detach().numpy() + self.factor.Xhat[:, 0]
                         self.xhat_data[q, :] = x_out
                         x_step = torch.tensor(x_out, dtype=torch.float32)  # don't delete this ! update input to NN !
-                        # match = R2(y[q - self.sensitivity:q, 0], self.xhat_data[q - self.sensitivity:q, 0])
                         match = R2(y[q - self.sensitivity:q, 0, 0], self.xhat_data[q - self.sensitivity:q, 0])
 
                         # if q > self.sensitivity:
@@ -142,19 +137,15 @@ class ForwardEulerPEM(nn.Module):  # use steps or R2 as switch
                         q = q + 1
 
                 y_nn = x_step[:, 0].clone().detach().numpy()
-
-                self.factor.pem_one(y[q-1] - y_nn, y_nn, on=False)  # for pem n-step ahead, y[q]
-
+                self.factor.pem_one(y[q-1] - y_nn, y_nn, on=False)  # for pem n-step ahead
                 q = q + 1
 
             if self.update == 8: # xtep = x_step+pem, copied from 5, use self.train to stop PEM, not R2,  added when stop
                 u_step = u[q]
                 dx = self.model(x_step, u_step)
-
-                x_step = x_step + dx * self.dt + torch.tensor(self.factor.Xhat[:, 0], dtype=torch.float32)# non-updating pem added
+                x_step = x_step + dx * self.dt + torch.tensor(self.factor.Xhat[:, 0], dtype=torch.float32) # non-updating pem added
 
                 self.xhat_data[q, :] = x_step[0, :].clone().detach().numpy()  # collect
-
                 self.y_pem0.append([self.factor.Xhat[0, 0], q])
                 self.y_pem.append([None, q])
 
