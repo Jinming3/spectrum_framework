@@ -57,7 +57,7 @@ def sinwave(A, dt, i, w, sig=1, phi=0):
     return x
 
 
-def triangle(A, i, dt, p=2.5):  # 2
+def triangle(A, i, dt, p=2.5):  
     """
     triangle wave signal
     A: amplitude
@@ -95,9 +95,9 @@ class measure:
 
         return self.Y, self.U
 
-    def sample_test(self, time_all, noise=1e-6):  # noise=1e-3
+    def sample_test(self, time_all, noise=1e-6):  
         """
-        # original system adding noise, non-aging
+         original system adding noise, non-aging
         """
 
         self.Y = []
@@ -105,7 +105,7 @@ class measure:
         self.ref = []  # only for demonstration
 
         for i in range(int(time_all / self.dt)):
-            pos_ref = sinwave(1, self.dt, i, 0.5)  #  original 1 0.5
+            pos_ref = sinwave(1, self.dt, i, 0.5)  
             y = self.system.measure(pos_ref, noise * 10, noise)
             self.ref.append(pos_ref)
             self.Y.append(y)
@@ -211,5 +211,6 @@ class measure:
         self.U = np.array(self.U, dtype=np.float32)
 
         return self.Y, self.U
+
 
 
