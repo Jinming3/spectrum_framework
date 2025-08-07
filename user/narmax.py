@@ -12,28 +12,15 @@ matplotlib.use("TkAgg")
 
 
 
-# basis_function = Polynomial(degree=1)
-# simulator_narmax = FROLS(
-#     order_selection=True,
-#     n_info_values=10,
-#     # extended_least_squares=False,
-#     ylag=2,
-#     xlag=2,
-#     info_criteria='aic',
-#     # estimator='least_squares',  # 'LeastSquares'
-#     basis_function=basis_function
-# )
 basis_function = Polynomial(degree=2)
 simulator_narmax = FROLS(
     n_terms=4,
-    order_selection=False,#True, #
+    order_selection=False,
     n_info_values=10,
-    # extended_least_squares=True,
     ylag=2,
     xlag=2,
-    info_criteria='aic', #'lilc',#'bic',#
-    estimator=LeastSquares(),  #
-    # estimator = RidgeRegression(lam=0.01),
+    info_criteria='aic', 
+    estimator=LeastSquares(),  
     basis_function=basis_function
 )
 
@@ -54,13 +41,12 @@ def train(data_sample_train, setup):
 def test(params, U_test, setup,  y=np.ones((2, 1)), ahead_step=0):  # test NN, non-aging
     params_list = params[0]
 
-    # x_fit = params[1]
     simulator = simulator_narmax
     simulator.theta = params_list
 
     if ahead_step == 0:
-        # yhat = simulator.simulate(X=U_test.reshape(-1, 1), y=y.reshape(-1, 1))  #, steps_ahead=1, infinit steps ahead
-        yhat = simulator.predict(X=U_test.reshape(-1, 1), y=y.reshape(-1, 1), steps_ahead=1)  #, infinit steps ahead
+       
+        yhat = simulator.predict(X=U_test.reshape(-1, 1), y=y.reshape(-1, 1), steps_ahead=1)  # or infinit steps ahead
 
         return yhat
     else:
