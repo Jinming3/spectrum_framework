@@ -5,7 +5,7 @@ Spectrum: A holistic evaluation framework for nonlinear system modeling methods.
 
 DOI: 10.1109/MOCAST65744.2025.11083951
 
-# Installation requirements:
+# Installation requirement:
 
 Language: Python 3.11
 
@@ -26,6 +26,7 @@ Write functions to be called in this form:
   ------------
 
 Start with the file "framework_start.py" for method training and test.
+
 
 
 
