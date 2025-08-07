@@ -1,5 +1,5 @@
 """
-code from: Forgione, M. and Piga, D. Continuous-time system identification with neuralnetworks: model structures and fitting criteria. 2021
+Method from: Forgione, M. and Piga, D. Continuous-time system identification with neuralnetworks: model structures and fitting criteria. 2021
 """
 
 import numpy as np
