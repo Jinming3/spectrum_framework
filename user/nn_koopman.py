@@ -8,33 +8,18 @@ import sys
 import math
 matplotlib.use("TkAgg")
 
-
 import torch
 import torch.nn as nn
 
-# np.random.seed(3)
-# torch.manual_seed(3407)
-# np.random.seed(0)
-# torch.manual_seed(0)
-
-
-np.random.seed(2681073600) # R2= 0.95 , hidden = 64
+np.random.seed(2681073600) 
 torch.manual_seed(1747224464971300)
-#
-# np.random.seed(2285816605) # R2= 0.94
-# torch.manual_seed(1747591965946400)
-# seed_n = 0
-# seed_t = 0
-# np.random.seed(seed_n)
-# torch.manual_seed(seed_t)
+
 batch_num = 64
 batch_length = 32
 n_x = 2
 
-hidden =  128 #64#
+hidden =  128 
 
-print('np seed begin', np.random.get_state()[1][0])
-print('torch seed begin ',  torch.seed())
 
 class MechanicalSystem(nn.Module):
 
@@ -42,16 +27,14 @@ class MechanicalSystem(nn.Module):
         super(MechanicalSystem, self).__init__()
         self.dt = dt  # sampling time
         self.hidden = hidden
-        self.phi_k = nn.Sequential(nn.Linear(n_x, 2*self.hidden), nn.LeakyReLU(negative_slope=3), nn.Linear(2*self.hidden, self.hidden),# 0.7
-                                   nn. ReLU())  #
-                                   # nn.ReLU())  # nonlinear to lift x
-        # self.phi_b = nn.Linear(1, self.hidden)  # linear to lift u
-        self.phi_b = nn.Sequential(nn.Linear(1, 2*self.hidden),nn.Linear(2*self.hidden, self.hidden))#,nn.ReLU(), nn.Linear(128, 64))#,nn.ReLU(),
+        self.phi_k = nn.Sequential(nn.Linear(n_x, 2*self.hidden), nn.LeakyReLU(negative_slope=3), nn.Linear(2*self.hidden, self.hidden),
+                                   nn. ReLU())  #  nonlinear to lift x
+                                   
+        self.phi_b = nn.Sequential(nn.Linear(1, 2*self.hidden),nn.Linear(2*self.hidden, self.hidden))
 
-                                   # nn.ReLU())nn.ReLU(),,nn.ReLU()
-
+                                
         self.inv_phi = nn.Linear(self.hidden, 1)
-        # np random seed = train seed
+      
         if init_small:
             for i in self.phi_k.modules():
                 if isinstance(i, nn.Linear):
@@ -67,23 +50,20 @@ class MechanicalSystem(nn.Module):
                     nn.init.constant_(i.bias, val=0)
 
 
-
     def forward(self, x1, u1):
         list_dx: List[torch.Tensor]
         self.out_k = self.phi_k(x1)
         self.out_b = self.phi_b(u1)
-
         self.out_q = self.out_k + self.out_b
         out_inv = self.inv_phi(self.out_q)
         dv = out_inv / self.dt  # v, dv = net(x, v)
 
-        # dv = self.net(in_xu) / self.dt  # v, dv = net(x, v)
         list_dx = [x1[..., [1]], dv]  # [dot x=v, dot v = a]
         dx = torch.cat(list_dx, -1)
         return dx
 
 
-class ForwardEuler(nn.Module):  # original
+class ForwardEuler(nn.Module): 
 
     def __init__(self, model, dt):
         super(ForwardEuler, self).__init__()
@@ -146,15 +126,12 @@ def get_batch(x_fit, U, Y_sys, batch_num, batch_length):
 #   --- process to be called ----
 
 def train(data_sample_train, setup):  # train NN
-    # np.random.seed(seed_n)
-    # torch.manual_seed(seed_t)
-    print('np seed train', np.random.get_state()[1][0])
-    print('torch seed train ', torch.seed())
+
     Y = data_sample_train[0]
     U = data_sample_train[1]
     dt =  setup.dt
-    num_epoch = 21000 #10000
-    lr = 0.001 #0.0001
+    num_epoch = 21000 
+    lr = 0.001
     simulator = ForwardEuler(model=MechanicalSystem(dt,  n_x,  hidden), dt=dt)
 
     N = len(Y)
@@ -163,7 +140,6 @@ def train(data_sample_train, setup):  # train NN
     Y_sys = Y_sys[:, np.newaxis]
     U = U[:, np.newaxis]
     v_est = vel(Y_sys, dt)
-
 
     X = np.zeros((N,  n_x), dtype=np.float32)
     X[:, 0] = np.copy(Y_sys[:, 0])
@@ -186,7 +162,6 @@ def train(data_sample_train, setup):  # train NN
         error_init = batch_yhat - batch_y
         error_scale = torch.sqrt(torch.mean(error_init ** 2, dim=(0, 1)))  # root MSE
 
-    # error_scale = torch.tensor([0.1])
 
     LOSS = []
     for epoch in range(num_epoch):
@@ -221,8 +196,7 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test NN, no
     x_fit = params[1]
     simulator = ForwardEuler(model=MechanicalSystem(setup.dt,  n_x,  hidden), dt=setup.dt)
 
-    simulator.model.load_state_dict(params_list, strict=False)  #
-
+    simulator.model.load_state_dict(params_list, strict=False)  
     simulator.model.eval()
 
     x0_vali = x_fit[0, :].detach().numpy()
