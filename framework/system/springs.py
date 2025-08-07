@@ -2,7 +2,6 @@ import numpy as np
 import math
 
 
-
 def sinwave(dt, i, w, A, sig=1, phi=0):
     """
     sin/cos wave signal
