@@ -1,14 +1,15 @@
+"""
+Method from: Forgione, M. and Piga, D. Continuous-time system identification with neuralnetworks: model structures and fitting criteria. 2021
+""" 
 import numpy as np
 import torch
 import time
 import matplotlib.pyplot as plt
 import matplotlib
-
 matplotlib.use("TkAgg")
 import os
 import sys
 import math
-from header import ForwardEulerPEM
 
 import torch
 import torch.nn as nn
@@ -69,7 +70,7 @@ class CascadedTanksOverflowNeuralStateSpaceModel(nn.Module):
         return dx
 
 
-class ForwardEuler(nn.Module):  # original
+class ForwardEuler(nn.Module): 
 
     def __init__(self, model, dt):
         super(ForwardEuler, self).__init__()
@@ -136,7 +137,7 @@ def train(data_sample_train, setup):  # train NN
     Y = data_sample_train[0]
     U = data_sample_train[1]
     dt = setup.dt
-    num_epoch = 10000#setup.num_epoch
+    num_epoch = 10000
     simulator = ForwardEuler(model=CascadedTanksOverflowNeuralStateSpaceModel(), dt=dt)
 
     N = len(Y)
@@ -202,7 +203,7 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test NN, no
     x_fit = params[1]
     simulator = ForwardEuler(model=CascadedTanksOverflowNeuralStateSpaceModel(), dt=setup.dt)
 
-    simulator.model.load_state_dict(params_list, strict=False)  #
+    simulator.model.load_state_dict(params_list, strict=False)  
 
     simulator.model.eval()
 
@@ -233,53 +234,3 @@ def test(params, U_test, setup, y=np.ones((2, 1)), ahead_step=0):  # test NN, no
             yhat_ahead = np.array(xhat_ahead[:, 0])
             return yhat_vali, yhat_ahead
 
-
-# ------- not tested yet >>> ----
-def update(Y_sys, U, simulator, params_list, x_fit):  # input model, input pem or others for regulator updating
-    N = len(Y_sys)
-    checkpoint = params_list
-    # optimizer = torch.optim.Adam([
-    #     {'params': model.parameters(), 'lr': online.lr},
-    #     {'params': [x_fit], 'lr': online.lr}
-    # ], lr=online.lr * 10)
-    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-    # print(checkpoint.dtype)
-    simulator.model.load_state_dict(checkpoint, strict=False)  # , strict=False
-    simulator.model.eval()
-    # -------------------------------------------------------------------------------------------------------------
-    x0 = x_fit[[0], :].detach()
-    Y_sys = np.array(Y_sys, dtype=np.float32)
-    U = np.array(U, dtype=np.float32)
-    Y_sys = Y_sys[:, np.newaxis]
-    U = U[:, np.newaxis]
-    u = torch.tensor(U[:, None, :])
-    y = Y_sys[:, np.newaxis]
-
-    xhat_data = simulator(x0, u, y)  # try not given full y_data!!! only partial update
-    # ----- optimization inside NN loop, stepwise --------
-    yhat = xhat_data[:, 0]
-    return yhat
-
-
-def regulator(params, Y, U, case):  # online regulator
-    # Y=data_sample[0]
-    # U=data_sample[1]
-    params_list = params[0]
-
-    x_fit = params[1]
-    N = len(Y)
-    threshold1 = 0.91  # start retrain, R2
-    threshold2 = 0.95  # stop retrain
-    factor = PEM(2, 6, N)
-    factor.P_old2 *= 0.09  # 0.009#0.09
-    factor.Psi_old2 *= 0.9
-    np.random.seed(3)
-    factor.Thehat_old = np.random.rand(6, 1) * 0.01
-    factor.Xhat_old = np.array([[2], [0]])
-
-    case = case
-    simulator = ForwardEulerPEM(model=CascadedTanksOverflowNeuralStateSpaceModel(), factor=factor, dt=dt, N=N, update=case, threshold1=threshold1,
-                                threshold2=threshold2)
-    yhat = update(Y, U, simulator, params_list, x_fit)
-    return yhat
